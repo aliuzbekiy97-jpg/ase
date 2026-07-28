@@ -1003,6 +1003,7 @@ export class World3D {
 
   private animId = 0;
   private clock  = new THREE.Clock();
+  private coffeeShopAudio: HTMLAudioElement | null = null;
 
   constructor(
     private container: HTMLElement,
@@ -1921,6 +1922,7 @@ export class World3D {
 
     // ── Proximity volume — update EVERY frame for instant voice trigger ──
     this.updateProximityVolumes();
+    this.updateCoffeeShopAudio();
 
     const now = performance.now();
     if (now - this.lastEmit >= EMIT_INTERVAL) {
@@ -2121,11 +2123,45 @@ export class World3D {
     });
   }
 
+  private updateCoffeeShopAudio() {
+    if (typeof window === 'undefined') return;
+
+    if (!this.coffeeShopAudio) {
+      // Soft, gentle lounge blues / jazz track
+      this.coffeeShopAudio = new Audio('https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3');
+      this.coffeeShopAudio.loop = true;
+      this.coffeeShopAudio.volume = 0.12; // Very soft, gentle background volume
+    }
+
+    if (this.currentRoom === 'coffee_shop') {
+      if (this.coffeeShopAudio.paused) {
+        this.coffeeShopAudio.play().catch(() => {
+          const resumeAudio = () => {
+            if (this.currentRoom === 'coffee_shop' && this.coffeeShopAudio) {
+              this.coffeeShopAudio.play().catch(() => {});
+            }
+          };
+          window.addEventListener('click', resumeAudio, { once: true });
+          window.addEventListener('keydown', resumeAudio, { once: true });
+          window.addEventListener('touchstart', resumeAudio, { once: true });
+        });
+      }
+    } else {
+      if (!this.coffeeShopAudio.paused) {
+        this.coffeeShopAudio.pause();
+      }
+    }
+  }
+
   public setLocalSpeaking(speaking: boolean) {
     this.localChar.scale.setScalar(speaking ? 1.06 : 1.0);
   }
 
   public destroy() {
+    if (this.coffeeShopAudio) {
+      this.coffeeShopAudio.pause();
+      this.coffeeShopAudio = null;
+    }
     cancelAnimationFrame(this.animId);
     this.renderer.dispose();
     this.renderer.domElement.remove();
