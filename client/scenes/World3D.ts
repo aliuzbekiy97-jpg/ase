@@ -1053,7 +1053,7 @@ export class World3D {
       powerPreference: 'high-performance',
       precision: this.isMobile ? 'mediump' : 'highp',
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.25 : 1.75));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.0 : 1.5));
 
     if (this.isMobile) {
       this.renderer.shadowMap.enabled = false;
