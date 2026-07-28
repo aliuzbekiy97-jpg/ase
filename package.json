@@ -1,0 +1,16 @@
+{
+  "name": "pixel-campus",
+  "version": "1.0.0",
+  "description": "2D pixel-art virtual campus with proximity voice chat",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "start:server": "cd server && node index.js",
+    "build": "cd client && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

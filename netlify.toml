@@ -1,0 +1,9 @@
+# Netlify Configuration for Pixel Campus Next.js Client
+
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "client/out"
+
+[build.environment]
+  NODE_VERSION = "20"
