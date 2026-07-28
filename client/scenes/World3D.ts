@@ -1004,6 +1004,7 @@ export class World3D {
   private animId = 0;
   private clock  = new THREE.Clock();
   private coffeeShopAudio: HTMLAudioElement | null = null;
+  private isMobile = false;
 
   constructor(
     private container: HTMLElement,
@@ -1012,6 +1013,7 @@ export class World3D {
     private gender: 'boy' | 'girl' = 'boy',
     color: string
   ) {
+    this.isMobile = typeof navigator !== 'undefined' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768);
     this.initRenderer();
     this.initScene();
     this.initPostProcessing();
@@ -1046,10 +1048,19 @@ export class World3D {
   }
 
   private initRenderer() {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: !this.isMobile,
+      powerPreference: 'high-performance',
+      precision: this.isMobile ? 'mediump' : 'highp',
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.25 : 1.75));
+
+    if (this.isMobile) {
+      this.renderer.shadowMap.enabled = false;
+    } else {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1068,6 +1079,7 @@ export class World3D {
   }
 
   private initPostProcessing() {
+    if (this.isMobile) return; // Skip heavy Bloom shader pass on mobile for 60 FPS performance!
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     const bloom = new UnrealBloomPass(
@@ -1901,7 +1913,11 @@ export class World3D {
     this.animId = requestAnimationFrame(() => this.loop());
     const dt = Math.min(this.clock.getDelta(), 0.05);
     this.update(dt);
-    this.composer.render();
+    if (this.composer && !this.isMobile) {
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   private update(dt: number) {

@@ -2,7 +2,7 @@
  * components/JoinScreen.tsx
  * Entry screen — collect username + group, fetch LiveKit token, then enter the world
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface JoinScreenProps {
   onJoin: (
@@ -15,11 +15,28 @@ interface JoinScreenProps {
 }
 
 export default function JoinScreen({ onJoin }: JoinScreenProps) {
-  const [name,    setName]    = useState('');
-  const [group,   setGroup]   = useState(1);
-  const [gender,  setGender]  = useState<'boy' | 'girl'>('boy');
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [name,           setName]           = useState('');
+  const [group,          setGroup]          = useState(1);
+  const [gender,         setGender]         = useState<'boy' | 'girl'>('boy');
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState('');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handlePrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handlePrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
+  }, []);
+
+  const handleInstallPWA = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+    }
+  };
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,11 +145,35 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
           </button>
         </form>
 
-        {/* Info */}
+        {/* Info & PWA Install */}
         <div className="join-info">
-          <div className="info-item">🎮 WASD / Arrow Keys to move</div>
-          <div className="info-item">🎙️ Voice chat activates near other players</div>
-          <div className="info-item">🏠 Visit any coffee shop room</div>
+          <div className="info-item">🎮 WASD / Joysticks to move</div>
+          <div className="info-item">🎙️ Proximity Voice Chat activated</div>
+          <div className="info-item">⚡ 60 FPS Mobile Optimized</div>
+          {deferredPrompt && (
+            <button
+              type="button"
+              onClick={handleInstallPWA}
+              style={{
+                marginTop: '10px',
+                padding: '10px 16px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              📱 Telefonga App Qilib O'rnatish (Install App)
+            </button>
+          )}
         </div>
       </div>
 
