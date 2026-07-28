@@ -109,33 +109,6 @@ export default function GameCanvas({
       {/* Three.js canvas mounts here */}
       <div ref={containerRef} className="phaser-container" />
 
-      {/* Dynamic 3D projected YouTube Cinema Screen */}
-      {currentRoom === 'cinema' && (
-        <div
-          id="cinema-iframe-container"
-          style={{
-            position: 'absolute',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 20,
-            pointerEvents: 'auto',
-            borderRadius: '6px',
-            overflow: 'hidden',
-            boxShadow: '0 0 40px rgba(0,0,0,0.95), 0 0 25px rgba(56, 189, 248, 0.4)',
-            border: '3px solid #1e293b',
-            background: '#000000',
-          }}
-        >
-          <iframe
-            width="100%"
-            height="100%"
-            src="https://www.youtube.com/embed/1SGg3QxYvS0?autoplay=1&mute=0&loop=1&playlist=1SGg3QxYvS0&controls=1&modestbranding=1&rel=0"
-            title="Broadway Cinema Haaland Video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{ border: 'none', display: 'block', width: '100%', height: '100%' }}
-          />
-        </div>
-      )}
 
       {/* HUD */}
       <div className="hud">
