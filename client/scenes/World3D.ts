@@ -1669,8 +1669,9 @@ export class World3D {
           rGroup.add(chair);
         }
       } else if (room.id === 'cinema') {
-        // Movie Screen
-        const screen = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.2), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+        // Movie Screen (Dark Frame behind HTML YouTube Overlay)
+        const screenMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+        const screen = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 0.2), screenMat);
         screen.position.set(cx, 4.5, cz - 11.5);
         rGroup.add(screen);
 
@@ -1892,6 +1893,7 @@ export class World3D {
 
     // ── Proximity volume — update EVERY frame for instant voice trigger ──
     this.updateProximityVolumes();
+    this.updateCinemaProjection();
 
     const now = performance.now();
     if (now - this.lastEmit >= EMIT_INTERVAL) {
@@ -2090,6 +2092,67 @@ export class World3D {
       const dist = Math.sqrt(dx * dx + dz * dz);
       setProximityVolume(r.data.name, dist);
     });
+  }
+
+  private updateCinemaProjection() {
+    const el = document.getElementById('cinema-iframe-container');
+    if (!el) return;
+
+    if (this.currentRoom !== 'cinema') {
+      el.style.display = 'none';
+      return;
+    }
+
+    // Cinema Screen Center (650, 4.5, -11.4) & Corners
+    const screenCenter = new THREE.Vector3(650, 4.5, -11.4);
+    const screenTL = new THREE.Vector3(650 - 8, 4.5 + 4, -11.4);
+    const screenBR = new THREE.Vector3(650 + 8, 4.5 - 4, -11.4);
+
+    // Vector from camera to screen center
+    const toScreen = screenCenter.clone().sub(this.camera.position);
+    const camDir = new THREE.Vector3();
+    this.camera.getWorldDirection(camDir);
+
+    // If looking away from screen (dot product <= 0)
+    if (camDir.dot(toScreen) <= 0) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const w = this.container.clientWidth || window.innerWidth;
+    const h = this.container.clientHeight || window.innerHeight;
+
+    const pCenter = screenCenter.clone().project(this.camera);
+    const pTL = screenTL.clone().project(this.camera);
+    const pBR = screenBR.clone().project(this.camera);
+
+    // If clip space depth is behind camera
+    if (pCenter.z > 1 || pTL.z > 1 || pBR.z > 1) {
+      el.style.display = 'none';
+      return;
+    }
+
+    const cxPx = (pCenter.x * 0.5 + 0.5) * w;
+    const cyPx = (-pCenter.y * 0.5 + 0.5) * h;
+
+    const tlX = (pTL.x * 0.5 + 0.5) * w;
+    const tlY = (-pTL.y * 0.5 + 0.5) * h;
+    const brX = (pBR.x * 0.5 + 0.5) * w;
+    const brY = (-pBR.y * 0.5 + 0.5) * h;
+
+    const screenW = Math.abs(brX - tlX);
+    const screenH = Math.abs(brY - tlY);
+
+    if (screenW < 20 || screenH < 10 || cxPx < -screenW || cxPx > w + screenW || cyPx < -screenH || cyPx > h + screenH) {
+      el.style.display = 'none';
+      return;
+    }
+
+    el.style.display = 'block';
+    el.style.left = `${cxPx}px`;
+    el.style.top = `${cyPx}px`;
+    el.style.width = `${screenW}px`;
+    el.style.height = `${screenH}px`;
   }
 
   public setLocalSpeaking(speaking: boolean) {
