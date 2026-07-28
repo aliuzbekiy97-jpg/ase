@@ -31,10 +31,14 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
     return () => window.removeEventListener('beforeinstallprompt', handlePrompt);
   }, []);
 
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
   const handleInstallPWA = () => {
     if (deferredPrompt) {
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+    } else {
+      setShowInstallGuide(true);
     }
   };
 
@@ -150,32 +154,98 @@ export default function JoinScreen({ onJoin }: JoinScreenProps) {
           <div className="info-item">🎮 WASD / Joysticks to move</div>
           <div className="info-item">🎙️ Proximity Voice Chat activated</div>
           <div className="info-item">⚡ 60 FPS Mobile Optimized</div>
-          {deferredPrompt && (
+          <button
+            type="button"
+            onClick={handleInstallPWA}
+            style={{
+              marginTop: '12px',
+              width: '100%',
+              padding: '12px 16px',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              border: 'none',
+              borderRadius: '10px',
+              color: '#ffffff',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            📱 Telefonga App Qilib O'rnatish (Install App)
+          </button>
+        </div>
+      </div>
+
+      {/* Modal Guide for PWA installation */}
+      {showInstallGuide && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setShowInstallGuide(false)}
+        >
+          <div
+            style={{
+              background: '#161b22',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '36px', marginBottom: '8px' }}>📱</div>
+            <h3 style={{ color: '#ffffff', fontSize: '18px', marginBottom: '8px' }}>
+              Telefonga App Qilib O'rnatish
+            </h3>
+            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px', lineHeight: '1.4' }}>
+              O'yin 60 FPS tezlikda, brauzer ortiqcha menyularisiz to'liq ekranda va silliq ishlashi uchun o'rnatib oling:
+            </p>
+
+            <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.05)', padding: '12px 14px', borderRadius: '10px', marginBottom: '10px', fontSize: '13px' }}>
+              <div style={{ color: '#10b981', fontWeight: 600, marginBottom: '4px' }}>🤖 Android (Google Chrome):</div>
+              O'ng tepadagi <strong>3 nuqta (⋮)</strong> ni bosing ➔ <strong>"Приложениеni o'rnatish"</strong> (yoki <i>Add to Home screen</i>).
+            </div>
+
+            <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.05)', padding: '12px 14px', borderRadius: '10px', marginBottom: '20px', fontSize: '13px' }}>
+              <div style={{ color: '#3b82f6', fontWeight: 600, marginBottom: '4px' }}>🍏 iPhone (Safari):</div>
+              Pastdagi <strong>Ulashish (📤 Share)</strong> tugmasini bosing ➔ <strong>"На экран «Домой»"</strong> ni tanlang.
+            </div>
+
             <button
-              type="button"
-              onClick={handleInstallPWA}
+              onClick={() => setShowInstallGuide(false)}
               style={{
-                marginTop: '10px',
-                padding: '10px 16px',
-                background: 'linear-gradient(135deg, #10b981, #059669)',
+                width: '100%',
+                padding: '12px',
+                background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
                 border: 'none',
                 borderRadius: '8px',
                 color: '#ffffff',
                 fontWeight: 600,
-                fontSize: '13px',
+                fontSize: '14px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
               }}
             >
-              📱 Telefonga App Qilib O'rnatish (Install App)
+              Tushunarli 👍
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Animated background pixels */}
       <div className="bg-pixels" aria-hidden="true">
