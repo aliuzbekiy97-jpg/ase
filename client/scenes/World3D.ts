@@ -1678,20 +1678,19 @@ export class World3D {
 
         // Native 3D Video Texture Screen (Fixed on wall, zero tracking, zero UI buttons)
         const video = document.createElement('video');
-        video.src = 'https://assets.mixkit.co/videos/41485/41485-720.mp4';
+        video.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
         video.crossOrigin = 'anonymous';
         video.loop = true;
         video.muted = true;
         video.playsInline = true;
         video.autoplay = true;
 
-        video.onerror = () => {
-          video.src = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-          video.play().catch(() => {});
-        };
-
         video.play().catch(() => {
-          window.addEventListener('click', () => video.play(), { once: true });
+          const unlockVideo = () => {
+            video.play().catch(() => {});
+          };
+          window.addEventListener('click', unlockVideo, { once: true });
+          window.addEventListener('touchstart', unlockVideo, { once: true });
         });
 
         const videoTex = new THREE.VideoTexture(video);
@@ -1699,7 +1698,7 @@ export class World3D {
         videoTex.minFilter = THREE.LinearFilter;
         videoTex.magFilter = THREE.LinearFilter;
 
-        const screenMat = new THREE.MeshBasicMaterial({ map: videoTex });
+        const screenMat = new THREE.MeshBasicMaterial({ map: videoTex, side: THREE.DoubleSide });
         const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 9), screenMat);
         screenMesh.position.set(cx, 4.5, cz - 11.4);
         rGroup.add(screenMesh);
@@ -2128,26 +2127,29 @@ export class World3D {
 
     if (!this.coffeeShopAudio) {
       // Soft, gentle lounge blues / jazz track
-      this.coffeeShopAudio = new Audio('https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3');
+      this.coffeeShopAudio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3');
       this.coffeeShopAudio.loop = true;
-      this.coffeeShopAudio.volume = 0.12; // Very soft, gentle background volume
+      this.coffeeShopAudio.volume = 0.25; // 25% volume - gentle & audible background
     }
 
     if (this.currentRoom === 'coffee_shop') {
       if (this.coffeeShopAudio.paused) {
-        this.coffeeShopAudio.play().catch(() => {
-          const resumeAudio = () => {
-            if (this.currentRoom === 'coffee_shop' && this.coffeeShopAudio) {
-              this.coffeeShopAudio.play().catch(() => {});
-            }
-          };
-          window.addEventListener('click', resumeAudio, { once: true });
-          window.addEventListener('keydown', resumeAudio, { once: true });
-          window.addEventListener('touchstart', resumeAudio, { once: true });
-        });
+        const promise = this.coffeeShopAudio.play();
+        if (promise !== undefined) {
+          promise.catch(() => {
+            const resumeAudio = () => {
+              if (this.currentRoom === 'coffee_shop' && this.coffeeShopAudio) {
+                this.coffeeShopAudio.play().catch(() => {});
+              }
+            };
+            window.addEventListener('click', resumeAudio, { once: true });
+            window.addEventListener('keydown', resumeAudio, { once: true });
+            window.addEventListener('touchstart', resumeAudio, { once: true });
+          });
+        }
       }
     } else {
-      if (!this.coffeeShopAudio.paused) {
+      if (this.coffeeShopAudio && !this.coffeeShopAudio.paused) {
         this.coffeeShopAudio.pause();
       }
     }
