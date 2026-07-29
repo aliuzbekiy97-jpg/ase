@@ -10,6 +10,9 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { getSocket, emitMove, type PlayerData, type MovePayload } from '../lib/socket';
 import { setProximityVolume, onParticipantSpeaking } from '../lib/livekit';
 
+// ─── Mobile performance flag (set by World3D constructor) ───────────────────
+let _isMobilePerf = false;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const MOVE_SPEED     = 0.14;
 const EMIT_INTERVAL  = 100;
@@ -231,12 +234,16 @@ function makeCharacter(
   (g as any).frontOpen = (headMats as any).frontOpen;
   (g as any).frontClosed = (headMats as any).frontClosed;
 
-  // Tasodifiy pirpirash
-  setInterval(() => {
+  // Tasodifiy pirpirash — blinkActive=false bilan to'xtatiladi (memory leak fix)
+  (g as any).blinkActive = true;
+  (g as any).blinkId = setInterval(() => {
+    if (!(g as any).blinkActive) return;
     const h = (g as any).headMesh;
     if (!h) return;
     (h.material as any)[4] = (g as any).frontClosed;
-    setTimeout(() => { (h.material as any)[4] = (g as any).frontOpen; }, 140);
+    setTimeout(() => {
+      if ((g as any).blinkActive) (h.material as any)[4] = (g as any).frontOpen;
+    }, 140);
   }, 2800 + Math.random() * 2500);
 
   // 2. Hair Cap
@@ -849,18 +856,20 @@ function makeBgSkyscraper(
   body.receiveShadow = true;
   g.add(body);
 
-  // Window grid on front face (+Z side)
-  const winMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.15, metalness: 0.85, emissive: 0x0a1628, emissiveIntensity: 0.3 });
-  const wRows = Math.floor(height / 3.5);
-  const wCols = Math.floor(width / 3.5);
-  for (let r = 0; r < wRows; r++) {
-    for (let c = 0; c < wCols; c++) {
-      if (Math.random() < 0.15) continue; // some windows dark
-      const win = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 0.15), winMat);
-      const wx = - (width / 2) + 2.0 + c * 3.2;
-      const wy = 3 + r * 3.5;
-      win.position.set(wx, wy, depth / 2 + 0.08);
-      g.add(win);
+  // Window grid on front face (+Z side) — mobilda o'tkazib yuboriladi (1000+ draw call tejash)
+  if (!_isMobilePerf) {
+    const winMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.15, metalness: 0.85, emissive: 0x0a1628, emissiveIntensity: 0.3 });
+    const wRows = Math.floor(height / 3.5);
+    const wCols = Math.floor(width / 3.5);
+    for (let r = 0; r < wRows; r++) {
+      for (let c = 0; c < wCols; c++) {
+        if (Math.random() < 0.15) continue; // some windows dark
+        const win = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 0.15), winMat);
+        const wx = - (width / 2) + 2.0 + c * 3.2;
+        const wy = 3 + r * 3.5;
+        win.position.set(wx, wy, depth / 2 + 0.08);
+        g.add(win);
+      }
     }
   }
 
@@ -955,9 +964,12 @@ function makeStreetLamp(): THREE.Group {
   lampHead.position.set(0, 4.45, 1.0);
   g.add(lampHead);
 
-  const pointLight = new THREE.PointLight(0xffecd1, 1.2, 14);
-  pointLight.position.set(0, 4.3, 1.0);
-  g.add(pointLight);
+  // PointLight faqat desktop uchun — mobilda 18+ PointLight = freeze!
+  if (!_isMobilePerf) {
+    const pointLight = new THREE.PointLight(0xffecd1, 1.2, 14);
+    pointLight.position.set(0, 4.3, 1.0);
+    g.add(pointLight);
+  }
 
   return g;
 }
@@ -1003,6 +1015,7 @@ export class World3D {
 
   private animId = 0;
   private clock  = new THREE.Clock();
+  private lastAudioCheck = 0; // Har frame emas, 500ms da bir marta audio state tekshirish
   private coffeeShopAudio: HTMLAudioElement | null = null;
   private isMobile = false;
 
@@ -1014,6 +1027,7 @@ export class World3D {
     color: string
   ) {
     this.isMobile = typeof navigator !== 'undefined' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768);
+    _isMobilePerf = this.isMobile; // Global helper funksiyalar uchun flag
     this.initRenderer();
     this.initScene();
     this.initPostProcessing();
@@ -1063,13 +1077,15 @@ export class World3D {
     }
 
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    // ACESFilmic qimmat shader — mobilda Linear ishlatiladi (ko'rinish deyarli bir xil)
+    this.renderer.toneMapping = this.isMobile ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = this.isMobile ? 1.0 : 1.15;
 
     this.resize();
     this.container.appendChild(this.renderer.domElement);
 
-    this.camera = new THREE.PerspectiveCamera(50, this.aspect(), 0.1, 500);
+    // Mobilda far plane 250 — uzoq narsalarni render qilmaydi, fog yashiradi
+    this.camera = new THREE.PerspectiveCamera(50, this.aspect(), 0.1, this.isMobile ? 250 : 500);
 
     window.addEventListener('resize', () => {
       this.resize();
@@ -1830,6 +1846,12 @@ export class World3D {
     const r = this.remotes.get(id);
     if (!r) return;
     r.cleanup?.();
+    // setInterval blink leak'ini to'xtatish
+    const g = r.group as any;
+    if (g.blinkActive !== undefined) {
+      g.blinkActive = false;
+      clearInterval(g.blinkId);
+    }
     this.scene.remove(r.group);
     this.remotes.delete(id);
   }
@@ -2140,6 +2162,10 @@ export class World3D {
 
   private updateCoffeeShopAudio() {
     if (typeof window === 'undefined') return;
+    // Har frame emas — 500ms da bir marta tekshirish (CPU tejaladi)
+    const now = performance.now();
+    if (now - this.lastAudioCheck < 500) return;
+    this.lastAudioCheck = now;
 
     if (!this.coffeeShopAudio) {
       // Soft, gentle lounge blues / jazz track
@@ -2179,6 +2205,20 @@ export class World3D {
     if (this.coffeeShopAudio) {
       this.coffeeShopAudio.pause();
       this.coffeeShopAudio = null;
+    }
+    // Barcha remote character blink interval'larini tozalash
+    this.remotes.forEach(r => {
+      const g = r.group as any;
+      if (g.blinkActive !== undefined) {
+        g.blinkActive = false;
+        clearInterval(g.blinkId);
+      }
+    });
+    // Local char blink ham
+    const lc = this.localChar as any;
+    if (lc?.blinkActive !== undefined) {
+      lc.blinkActive = false;
+      clearInterval(lc.blinkId);
     }
     cancelAnimationFrame(this.animId);
     this.renderer.dispose();
